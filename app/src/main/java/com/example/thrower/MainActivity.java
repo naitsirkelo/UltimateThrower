@@ -7,32 +7,31 @@ import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.media.MediaPlayer;
 import android.os.CountDownTimer;
-import android.support.design.widget.FloatingActionButton;
+import android.os.Handler;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
-import android.view.ViewGroup;
+import android.view.animation.Animation;
+import android.view.animation.AnimationUtils;
 import android.widget.Button;
-import android.widget.ProgressBar;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
 
-import static android.hardware.SensorManager.GRAVITY_EARTH;
-
 public class MainActivity extends AppCompatActivity implements SensorEventListener {
 
-    private TextView minAccText, currentAccText, thrownAccText, timeText, heightText, recordHeightText, throwOrGroundText;
-    public float vel = 0.f, acc = 0.f, minAcc = 5.f, heightRecord = 0.f, height = 0.f;
+    private TextView minAccText, currentAccText, thrownAccText, heightText, recordHeightText;
     long totalSeconds = 30, intervalSeconds = 1;
     String timeCounter = "0.0";
     CountDownTimer timer;
     private SensorManager sensorManager;
     private Sensor accelerometer;
-    MediaPlayer sound;
-    ProgressBar timeBar, heightBar;
-    boolean thrown = false;
+    ImageView animationTarget;
+    Animation animation;
+    public float minAcc = 15.f, heightRecord = 0.f, height = 0.f, gravity = SensorManager.GRAVITY_EARTH;
+
 
     public static final int REQUEST_SETTINGS = 1;
 
@@ -42,37 +41,23 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        sensorManager     = (SensorManager) getSystemService(SENSOR_SERVICE);
+        sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
 
-        accelerometer     = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+        accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
 
-        currentAccText    = findViewById(R.id.currentAccText);
+        currentAccText = findViewById(R.id.currentAccText);
 
-        thrownAccText     = findViewById(R.id.thrownAccText);
+        thrownAccText = findViewById(R.id.thrownAccText);
 
-        timeText          = findViewById(R.id.timeText);
+        heightText = findViewById(R.id.heightText);
 
-        heightText        = findViewById(R.id.heightText);
+        recordHeightText = findViewById(R.id.recordHeightText);
 
-        recordHeightText  = findViewById(R.id.recordHeightText);
+        animationTarget = findViewById(R.id.testImage);
+        animation = AnimationUtils.loadAnimation(MainActivity.this, R.anim.rotate_around_center_point);
 
-        throwOrGroundText = findViewById(R.id.throwOrGroundText);
-
-        timeBar           = findViewById(R.id.timeBar);
-
-        heightBar         = findViewById(R.id.heightBar);
-
-        minAccText        = findViewById(R.id.minAccTextView);
+        minAccText = findViewById(R.id.minAccTextView);
         minAccText.setText(String.valueOf(minAcc));
-
-
-        /* Defining the sound to be played at the highest point of the throw. */
-        sound = MediaPlayer.create(this, R.raw.pling);
-        sound.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
-            public void onCompletion(MediaPlayer sound) {
-                sound.release();
-            }
-        });
 
 
         /* Allowing user to reset to original state. */
@@ -96,7 +81,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             @Override
             public void onClick(View view) {
 
-                newThrow();
+                resetThrow();
             }
         });
 
@@ -119,13 +104,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
                 float n = Float.valueOf(millisUntilFinished / 1000 + "." + ((millisUntilFinished / 100) % 10));
                 float t = ((float) totalSeconds - n);
-                timeBar.setProgress((int) t);
 
                 timeCounter = String.format("%.1f", t);
                 timeCounter = timeCounter.replace(",", ".");
-
-                timeText.setText(timeCounter);
-
             }
 
             public void onFinish() {
@@ -162,35 +143,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     }
 
 
-    public void newThrow() {
-        height = 0.f;
-        String h = String.format("%.3f", height);
-        h = h.replace(",", ".");
-        heightText.setText(h);
-
-        timeCounter = "0.0";
-        timeText.setText(String.valueOf(timeCounter));
-
-        timer.cancel();
-        throwOrGroundText.setText("On the ground.");
-
-        thrownAccText.setText("-");
-
-        timeBar.setProgress(0);
-        heightBar.setProgress(0);
-    }
-
-
-    /* Send imageView to back of screen. */
-    public static void sendViewToBack(final View child) {
-        final ViewGroup parent = (ViewGroup) child.getParent();
-        if (null != parent) {
-            parent.removeView(child);
-            parent.addView(child, 0);
-        }
-    }
-
-
     @Override
     public void onResume() {
         super.onResume();
@@ -214,7 +166,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             float y = event.values[0];
             float z = event.values[0];
 
-            acc = (float) Math.sqrt(x * x + y * y + z * z) - GRAVITY_EARTH;
+            //acc = (float) Math.sqrt(x * x + y * y + z * z) - GRAVITY_EARTH;
+            float acc = (float) Math.sqrt(x * x + y * y + z * z); // - 9.81 or not?
+
             String a = String.format("%.3f", acc);
             a = a.replace(",", ".");
             currentAccText.setText(String.valueOf(a));
@@ -222,41 +176,13 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             /* Is the current acc larger than set minimum value? */
             if (acc >= minAcc) {
 
-                /* Has the timer not been started yet? */
-                if (timeCounter.equals("0.0")) {
+                a = String.format("%.3f", acc);
+                a = a.replace(",", ".");
+                thrownAccText.setText(a);
 
-                    timer.start();
-                    a = String.format("%.3f", acc);
-                    a = a.replace(",", ".");
-                    thrownAccText.setText(a);
-
-                    String hr = String.format("%.3f", heightRecord);
-                    hr = hr.replace(",", ".");
-                    recordHeightText.setText(hr);
-
-                }
-
+                newThrow(acc);
             }
-
-            vel = acc + (-GRAVITY_EARTH * Float.parseFloat(timeCounter));
-
-
-            height += vel;
-            heightBar.setProgress((int) height);
-
-            if (vel < 0.01f && vel > -0.01f) sound.start();
-            if (height > heightRecord) heightRecord = height;
-
-            if (height < 0.01f) height = 0.f;
-            String h = String.format("%.3f", height);
-            h = h.replace(",", ".");
-            heightText.setText(h);
-
-            if (height > 0.f) throwOrGroundText.setText("Throw!");
-            else throwOrGroundText.setText("On the ground.");
-
         }
-
     }
 
 
@@ -265,4 +191,63 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     }
 
 
+    public void newThrow(float acc) {
+
+        animationTarget.startAnimation(animation);
+
+        height = (acc * 2) / (gravity * 2);
+
+        if (height > heightRecord) {
+            heightRecord = height;
+        }
+
+        String h = String.format("%.3f", height);
+        h = h.replace(",", ".");
+        heightText.setText(h);
+
+        String hr = String.format("%.3f", heightRecord);
+        hr = hr.replace(",", ".");
+        recordHeightText.setText(hr);
+
+
+        /* Defining the sound to be played at the highest point of the throw. */
+        final MediaPlayer sound = MediaPlayer.create(this, R.raw.pling);
+        sound.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+            public void onCompletion(MediaPlayer sound) {
+                sound.release();
+            }
+        });
+
+
+        final float timeToTop = acc / gravity;
+
+        /* Playing sound when then ball is at the top of the trajectory. */
+        final Handler handler = new Handler();
+        handler.postDelayed(new Runnable() {
+            public void run() {
+
+                sound.start();
+
+                /* Stop animation when ball reaches the ground again. */
+                handler.postDelayed(new Runnable() {
+                    public void run() {
+                        animationTarget.clearAnimation();
+                    }
+                }, (long) timeToTop * 1000);
+            }
+        }, (long) timeToTop * 1000);
+    }
+
+
+    public void resetThrow() {
+
+        height = 0.f;
+        String h = String.format("%.3f", height);
+        h = h.replace(",", ".");
+        heightText.setText(h);
+
+        thrownAccText.setText("-");
+
+        animationTarget.clearAnimation();
+    }
 }
