@@ -1,5 +1,7 @@
 # UltimateThrower
 
+![Build Status](https://img.shields.io/badge/build-running-green.svg)
+
 ## How To Use
 
 - Reset button: Resets the recorded data and prepares for new throw.
