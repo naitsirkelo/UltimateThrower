@@ -23,14 +23,17 @@ import android.widget.Toast;
 public class MainActivity extends AppCompatActivity implements SensorEventListener {
 
     private TextView minAccText, currentAccText, thrownAccText, heightText, recordHeightText;
-    long totalSeconds = 30, intervalSeconds = 1;
+    public long totalSeconds = 30, intervalSeconds = 1;
     String timeCounter = "0.0";
     CountDownTimer timer;
     private SensorManager sensorManager;
     private Sensor accelerometer;
     ImageView animationTarget;
     Animation animation;
-    public float minAcc = 15.f, heightRecord = 0.f, height = 0.f, gravity = SensorManager.GRAVITY_EARTH;
+    MediaPlayer sound;
+    public float minAcc = 15.f, heightRecord = 0.f, height = 0.f;
+    public float gravity = SensorManager.GRAVITY_EARTH, timeSetting = 1.5f;
+    public boolean onGround = true;
 
 
     public static final int REQUEST_SETTINGS = 1;
@@ -59,6 +62,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         minAccText = findViewById(R.id.minAccTextView);
         minAccText.setText(String.valueOf(minAcc));
 
+        sound = MediaPlayer.create(this, R.raw.pling);
+
 
         /* Allowing user to reset to original state. */
         final Button resetButton = findViewById(R.id.btn_reset);
@@ -67,10 +72,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             public void onClick(View view) {
 
                 Intent intent = getIntent();
-                overridePendingTransition(0, 0);
                 finish();
                 startActivity(intent);
-                overridePendingTransition(0, 0);
+                overridePendingTransition(R.anim.fadein, R.anim.fadeout);
             }
         });
 
@@ -166,8 +170,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             float y = event.values[0];
             float z = event.values[0];
 
-            //acc = (float) Math.sqrt(x * x + y * y + z * z) - GRAVITY_EARTH;
-            float acc = (float) Math.sqrt(x * x + y * y + z * z); // - 9.81 or not?
+            float acc = (float) Math.sqrt(x * x + y * y + z * z) - gravity;
 
             String a = String.format("%.3f", acc);
             a = a.replace(",", ".");
@@ -180,7 +183,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 a = a.replace(",", ".");
                 thrownAccText.setText(a);
 
-                newThrow(acc);
+                if (onGround) {
+                    onGround = false;
+                    newThrow(acc);
+                }
             }
         }
     }
@@ -210,16 +216,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         recordHeightText.setText(hr);
 
 
-        /* Defining the sound to be played at the highest point of the throw. */
-        final MediaPlayer sound = MediaPlayer.create(this, R.raw.pling);
-        sound.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
-            public void onCompletion(MediaPlayer sound) {
-                sound.release();
-            }
-        });
-
-
-        final float timeToTop = acc / gravity;
+        final float timeToTop = acc / gravity / timeSetting;
 
         /* Playing sound when then ball is at the top of the trajectory. */
         final Handler handler = new Handler();
@@ -231,11 +228,14 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 /* Stop animation when ball reaches the ground again. */
                 handler.postDelayed(new Runnable() {
                     public void run() {
+
                         animationTarget.clearAnimation();
+                        onGround = true;
+
                     }
-                }, (long) timeToTop * 1000);
+                }, (long) timeToTop * 1000);    /* Time to top. */
             }
-        }, (long) timeToTop * 1000);
+        }, (long) timeToTop * 1000);    /* Time to bottom. */
     }
 
 
@@ -249,5 +249,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         thrownAccText.setText("-");
 
         animationTarget.clearAnimation();
+
+        onGround = true;
     }
 }

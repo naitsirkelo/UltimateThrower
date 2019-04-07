@@ -1,18 +1,20 @@
 # UltimateThrower
 
-![Build Status](https://img.shields.io/badge/build-running-green.svg)
+![Build Status](https://img.shields.io/badge/build-passing-green.svg)
 
 ## How To Use
 
 - Reset button: Resets the recorded data and prepares for new throw.
 - New Throw button: Resets data except Height Record before new throw.
 - Settings button: Moves the user to the Settings page where the variable for Minimum Acceleration required can be set using a slider.
+- A new throw is only possible once the ball from the previous throw has landed, unless New Throw or Reset is pushed.
 
 ## Structure
-- Animation: A simple animation will show the ball in motion until it reaches the ground.
-- Sound: Plays when ball reaches highest point.
+- Animation: A simple animation will play to indicate the ball being in motion, until it reaches the ground.
+- Sound: Plays when the ball reaches the highest point on the trajectory.
 - Forces: The Current force being experienced by the phone and the force the ball was Thrown at are recorded and shown at the bottom of the screen.
-- The code is placed in two .java files: MainActivity and Settings. The icon and picture for animation is placed in their respectable folders in ''/res'.
+- The code is placed in two .java files: MainActivity and Settings. The icon, the ball picture for the animation and custom animation files are placed in their respectable folders in '/res'.
+- To prevent landscape mode from messing with the accelerometer the application is locked in portrait mode.
 
 
 ## Checklist
